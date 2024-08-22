@@ -9,7 +9,7 @@
       href="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css"
       rel="stylesheet"
     />
-    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.2.3/mapbox-gl-rtl-text.js"></script>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v1.13.0/mapbox-gl.css" rel="stylesheet" />
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.3.1/mapbox-gl-directions.js"></script>
     <link
       rel="stylesheet"
@@ -37,6 +37,7 @@
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         z-index: 1;
         width: 320px;
+        margin-bottom: 17px;
       }
       h3 {
         margin: 0 0 10px;
@@ -49,10 +50,21 @@
         margin-bottom: 5px;
         display: block;
       }
-      textarea, input {
+      textarea {
+        height: 70px;
+        border-radius: 6px;
+        width: 94%;
+        padding: 0 10px;
+        border: 1px solid #d1d5db;
+        font-size: 14px;
+        margin-bottom: 10px;
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
+        resize: none;
+      }
+      input {
         height: 36px;
         border-radius: 6px;
-        width: 100%;
+        width: 94%;
         padding: 0 10px;
         border: 1px solid #d1d5db;
         font-size: 14px;
@@ -81,23 +93,13 @@
   <body>
     <div id="controls">
       <h3>Set Route Points</h3>
-      <label for="start">Start (Lng, Lat):</label>
-      <input
-        type="text"
-        id="start"
-        placeholder="32.562628, 35.819215"
-        value="32.55804885953005, 35.839288771869484"
-      />
+      <label for="start">Start ( Lat , Long )</label>
+      <input type="text" id="start" placeholder="32.562628, 35.819215" />
       <br />
-      <label for="end">End (Lng, Lat):</label>
-      <input
-        type="text"
-        id="end"
-        placeholder="32.558049, 35.839289"
-        value="32.56262841761972, 35.81921516122133"
-      />
+      <label for="end">End ( Lat , Long )</label>
+      <input type="text" id="end" placeholder="32.558049, 35.839289" />
       <br />
-      <label for="waypoints">Waypoints (Lng, Lat)</label>
+      <label for="waypoints">Waypoints ( Lat , Long )</label>
       <textarea
         id="waypoints"
         placeholder="32.562950, 35.824537; 32.561250, 35.832294; ..."

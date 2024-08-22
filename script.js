@@ -1,6 +1,12 @@
 mapboxgl.accessToken =
   "pk.eyJ1IjoibW9oYm9yaW5pIiwiYSI6ImNtMDNzajUyczAxMHYycnM0cTE4cTV4amoifQ.0KnW_JhYY7pcTx9NVVWFXg";
-
+  if (typeof mapboxgl !== 'undefined' && mapboxgl.setRTLTextPlugin) {
+    mapboxgl.setRTLTextPlugin(
+      'https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-rtl-text/v0.2.3/mapbox-gl-rtl-text.js',
+      null,
+      true // Lazy load the plugin
+    );
+  }
 const map = new mapboxgl.Map({
   container: "map",
   style: "mapbox://styles/mapbox/streets-v11",
@@ -23,8 +29,25 @@ let waypoints = []; // Global variable to store the waypoints
 let start = []; // Global variable to store the start point
 let end = []; // Global variable to store the end point
 
-// Function to parse input and update the route
+async function getOptimizedRoute(waypoints) {
+  const maxWaypointsPerRequest = 9; // Using 9 to stay under the API's waypoint limit
+  let optimizedGeometry = [];
+  let lastPoint = start;
+
+  for (let i = 0; i < waypoints.length; i += maxWaypointsPerRequest) {
+    const chunk = waypoints.slice(i, i + maxWaypointsPerRequest);
+    const chunkRoute = await getRoute([lastPoint, ...chunk, end], true);
+    if (chunkRoute.length > 1) {
+      optimizedGeometry = optimizedGeometry.concat(chunkRoute);
+      lastPoint = chunkRoute[chunkRoute.length - 1];
+    }
+  }
+
+  return optimizedGeometry;
+}
+// Modify updateRoute function
 async function updateRoute() {
+  // Extracting waypoints as before
   const startInput = document.getElementById("start").value;
   const endInput = document.getElementById("end").value;
   const waypointsInput = document.getElementById("waypoints").value;
@@ -36,31 +59,12 @@ async function updateRoute() {
     .filter((point) => point.trim() !== "")
     .map((point) => point.split(",").map(Number).reverse());
 
-  const maxWaypointsPerRequest = 22;
-  routeGeometry = []; // Clear previous route
-  let lastPoint = start;
+  // Get optimized route
+  routeGeometry = await getOptimizedRoute([...waypoints, end]);
 
-  for (let i = 0; i < waypoints.length; i += maxWaypointsPerRequest) {
-    const waypointChunk = waypoints.slice(i, i + maxWaypointsPerRequest);
-    const endPoint =
-      i + maxWaypointsPerRequest >= waypoints.length
-        ? end
-        : waypointChunk[waypointChunk.length - 1];
-
-    const routeSegment = await getRoute([
-      lastPoint,
-      ...waypointChunk,
-      endPoint,
-    ]);
-    if (i > 0) {
-      routeSegment.shift(); // Avoid duplicating the connection point
-    }
-    routeGeometry = routeGeometry.concat(routeSegment);
-    lastPoint = endPoint;
-  }
-
+  // Display the route
   displayRoute(routeGeometry);
-
+  
   // Clear input fields after processing
   document.getElementById("start").value = "";
   document.getElementById("end").value = "";
@@ -106,21 +110,25 @@ async function updateRoute() {
 }
 
 // Function to call the Mapbox Directions API
-async function getRoute(waypoints) {
-  console.log("Waypoints:", waypoints); // Log the waypoints for debugging
+async function getRoute(waypoints, optimize = false) {
   const coords = waypoints.map((coord) => coord.join(",")).join(";");
-  const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coords}?geometries=geojson&overview=full&steps=true&access_token=${mapboxgl.accessToken}`;
+  const apiEndpoint = optimize ? "optimized-trips" : "directions";
+  const url = `https://api.mapbox.com/${apiEndpoint}/v1/mapbox/driving/${coords}?geometries=geojson&overview=full&steps=false&access_token=${mapboxgl.accessToken}`;
 
   const response = await fetch(url);
   const data = await response.json();
 
-  console.log("Route data:", data); // Log the API response for debugging
-
-  if (!data.routes || data.routes.length === 0) {
-    throw new Error("No route found for the given waypoints.");
+  if (optimize) {
+    if (!data.trips || data.trips.length === 0) {
+      throw new Error("No optimized route found for the given waypoints.");
+    }
+    return data.trips[0].geometry.coordinates;
+  } else {
+    if (!data.routes || data.routes.length === 0) {
+      throw new Error("No route found for the given waypoints.");
+    }
+    return data.routes[0].geometry.coordinates;
   }
-
-  return data.routes[0].geometry.coordinates;
 }
 
 // Function to display the route on the map
