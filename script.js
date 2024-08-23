@@ -52,12 +52,27 @@ async function updateRoute() {
   const endInput = document.getElementById("end").value;
   const waypointsInput = document.getElementById("waypoints").value;
 
+  // Clear the coordinates list div
+  const coordinatesList = document.getElementById("coordinatesList");
+  coordinatesList.innerHTML = "";
+
   start = startInput.split(",").map(Number).reverse();
   end = endInput.split(",").map(Number).reverse();
   waypoints = waypointsInput
     .split(";")
     .filter((point) => point.trim() !== "")
     .map((point) => point.split(",").map(Number).reverse());
+
+  // Add start point to the coordinates list
+  addCoordinateToList(start, "Start");
+
+  // Add waypoints to the coordinates list
+  waypoints.forEach((waypoint, index) => {
+    addCoordinateToList(waypoint, `Stop ${index + 1}`);
+  });
+
+  // Add end point to the coordinates list
+  addCoordinateToList(end, "End");
 
   // Get optimized route
   routeGeometry = await getOptimizedRoute([...waypoints, end]);
@@ -89,7 +104,7 @@ async function updateRoute() {
   waypoints.forEach((waypoint, index) => {
     addMarker(
       waypoint,
-      `Waypoint ${index + 1}`,
+      `Stop ${index + 1}`,
       "https://docs.mapbox.com/mapbox-gl-js/assets/custom_marker.png"
     );
   });
@@ -108,7 +123,26 @@ async function updateRoute() {
     { padding: 50 }
   );
 }
+function addCoordinateToList(coords, label) {
+  const coordinatesList = document.getElementById("coordinatesList");
 
+  const coordinateDiv = document.createElement("div");
+  coordinateDiv.className = "coordinate-item";
+  coordinateDiv.textContent = `${label}: ${coords[1].toFixed(6)}, ${coords[0].toFixed(6)}`;
+  coordinateDiv.style.cursor = "pointer";
+  coordinateDiv.style.backgroundColor = "#d1e7ff"; // Light blue highlight
+  coordinateDiv.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.2)";
+  // Add click event to focus on the map
+  coordinateDiv.addEventListener("click", () => {
+    map.flyTo({ center: coords, zoom: 20});
+    new mapboxgl.Popup({ offset: 25 })
+      .setLngLat(coords)
+      .setText(label)
+      .addTo(map);
+  });
+
+  coordinatesList.appendChild(coordinateDiv);
+}
 // Function to call the Mapbox Directions API
 async function getRoute(waypoints, optimize = false) {
   const coords = waypoints.map((coord) => coord.join(",")).join(";");
@@ -240,7 +274,7 @@ function exportToKML() {
   waypoints.forEach((waypoint, index) => {
     kml += `
       <Placemark>
-        <name>Waypoint ${index + 1}</name>
+        <name>Stop ${index + 1}</name>
         <Point>
           <coordinates>${waypoint[0]},${waypoint[1]}</coordinates>
         </Point>
