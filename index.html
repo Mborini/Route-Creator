@@ -4,13 +4,11 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="stylesheet" href="style.css" />
     <script src="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js"></script>
     <link
       href="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css"
-      rel="stylesheet"
-    />
-    <link
-      href="https://api.mapbox.com/mapbox-gl-js/v1.13.0/mapbox-gl.css"
       rel="stylesheet"
     />
     <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.3.1/mapbox-gl-directions.js"></script>
@@ -19,145 +17,53 @@
       href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.3.1/mapbox-gl-directions.css"
       type="text/css"
     />
-    <title>Borini Directions</title>
-    <style>
-      body {
-        margin: 0;
-        font-family: "Inter", sans-serif;
-        background-color: #ffffff;
-        display: flex;
-        height: 100vh;
-        overflow: hidden;
-      }
-
-      #map {
-        flex: 1;
-        margin: 12px 0 12px 12px; 
-        border-radius: 15px;
-      }
-
-      #sidebar {
-        display: flex;
-        flex-direction: column;
-        width: 400px;
-        background-color: #ffffff;
-        padding: 15px;
-        
-        overflow-y: auto;
-      }
-
-      #controls {
-        background: #ffffff;
-        padding: 15px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.148);
-        margin-bottom: 20px;
-      }
-
-      h3 {
-        margin: 0 0 10px;
-        font-size: 18px;
-        color: #333333;
-      }
-
-      label {
-        font-size: 14px;
-        color: #555555;
-        margin-bottom: 5px;
-        display: block;
-      }
-
-      textarea,
-      input {
-        width: 95%;
-        padding: 10px;
-        border-radius: 6px;
-        border: 1px solid #d1d5db;
-        font-size: 14px;
-        margin-bottom: 10px;
-        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.05);
-        resize: none;
-      }
-
-      button {
-        width: 100%;
-        height: 40px;
-        border-radius: 6px;
-        background-color: #0078ff;
-        color: #ffffff;
-        font-size: 14px;
-        font-weight: 600;
-        border: none;
-        cursor: pointer;
-        transition: background-color 0.3s ease;
-        margin-top: 10px;
-      }
-
-      button:hover {
-        background-color: #005bb5;
-      }
-
-      #listContainer {
-        background: #ffffff;
-        padding: 15px;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-        margin-bottom: 0;
-        max-height: 100%;
-        overflow-y: auto; 
-      }
-      #coordinatesList {
-        
-        padding: 15px;
-        
-        
-      
-       
-        overflow-y: auto; /* Allows scrolling if content exceeds max-height */
-      }
-
-      .coordinate-item {
-        padding: 10px 15px;
-        border: 1px solid #d1d5db;
-        border-radius: 6px;
-        margin-bottom: 8px;
-        background-color: #f9f9f9;
-        font-size: 14px;
-        color: #333333;
-        transition: background-color 0.3s ease, box-shadow 0.3s ease;
-        cursor: pointer;
-      }
-
-      .coordinate-item:hover {
-        background-color: #e2e8f0;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      }
-    </style>
+    <link
+      rel="stylesheet"
+      type="text/css"
+      href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css"
+    />
+    <script
+      type="text/javascript"
+      src="https://cdn.jsdelivr.net/npm/toastify-js"
+    ></script>
+    <title>Directions</title>
   </head>
+
   <body>
-    <div id="map"></div>
-    <div id="sidebar">
+    <div id="navbar">
+      <h1>Route Creator</h1>
+    </div>
+
+    <div id="content">
       <div id="controls">
-        <h3>Set Route Points</h3>
-        <label for="start">Start ( Lat , Long )</label>
-        <input type="text" id="start" placeholder="32.562628, 35.819215" />
-        <br />
-        <label for="end">End ( Lat , Long )</label>
-        <input type="text" id="end" placeholder="32.558049, 35.839289" />
-        <br />
-        <label for="waypoints">Waypoints ( Lat , Long )</label>
-        <textarea
-          id="waypoints"
-          placeholder="32.562950, 35.824537; 32.561250, 35.832294; ..."
-        ></textarea>
-        <label for="">* Waypoints: Separate with semicolons</label>
-        <br />
-        <button id="updateRoute">Update Route</button>
-        <button id="exportKML">Export to KML</button>
+        <h3>Route Information</h3>
+        <div id="routeInfo"></div>
       </div>
-      <div id="listContainer">
-        <h3>Route Coordinates</h3>
-        <div id="coordinatesList"></div>
+      <div id="map"></div>
+      <div id="sidebar">
+        <div id="control">
+          <h3>Set Route Points</h3>
+          <label for="start">Start (Lat, Long)</label>
+          <input type="text" id="start" placeholder="32.562628, 35.819215" />
+          <br />
+          <label for="end">End (Lat, Long)</label>
+          <input type="text" id="end" placeholder="32.558049, 35.839289" />
+          <br />
+          <label for="waypoints">Waypoints (Lat, Long)</label>
+          <textarea
+            id="waypoints"
+            placeholder="32.562950, 35.824537; 32.561250, 35.832294; ..."
+          ></textarea>
+          <label for="">* Waypoints: Separate with semicolons</label>
+          <br />
+          <button id="updateRoute">Create Route</button>
+          <button id="exportKML">Export to KML</button>
+        </div>
+
+        <div id="listContainer">
+          <h3>Route Coordinates</h3>
+          <div id="coordinatesList"></div>
+        </div>
       </div>
     </div>
 
