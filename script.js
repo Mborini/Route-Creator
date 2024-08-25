@@ -20,6 +20,49 @@ function validateCoordinates(coords) {
   return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
 }
 
+// Function to calculate the distance between two points
+function calculateDistance(point1, point2) {
+  const [lng1, lat1] = point1;
+  const [lng2, lat2] = point2;
+  const R = 6371e3; // Radius of the Earth in meters
+  const φ1 = (lat1 * Math.PI) / 180;
+  const φ2 = (lat2 * Math.PI) / 180;
+  const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+  const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+
+  const a =
+    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // Distance in meters
+}
+
+// Function to sort waypoints by nearest neighbor
+function sortWaypointsByNearest(start, waypoints) {
+  const sortedWaypoints = [];
+  let currentPoint = start;
+
+  while (waypoints.length > 0) {
+    let nearestIndex = 0;
+    let nearestDistance = calculateDistance(currentPoint, waypoints[0]);
+
+    for (let i = 1; i < waypoints.length; i++) {
+      const distance = calculateDistance(currentPoint, waypoints[i]);
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestIndex = i;
+      }
+    }
+
+    const nearestWaypoint = waypoints.splice(nearestIndex, 1)[0];
+    sortedWaypoints.push(nearestWaypoint);
+    currentPoint = nearestWaypoint;
+  }
+
+  return sortedWaypoints;
+}
+
 // Function to call the Mapbox Directions API and get route data
 async function getRoute(waypoints) {
   const coords = waypoints.map((coord) => coord.join(",")).join(";");
@@ -70,7 +113,6 @@ async function getRouteInChunks(start, waypoints, end) {
     duration: totalDuration,
   };
 }
-
 
 // Function to reverse geocode coordinates to get street names and landmarks
 async function reverseGeocode(coords) {
@@ -133,10 +175,12 @@ async function updateRoute() {
     .map((point) => point.split(",").map(Number).reverse())
     .filter(validateCoordinates);
 
+  // Sort waypoints by nearest neighbor strategy
+  waypoints = sortWaypointsByNearest(start, waypoints);
+
   // Get route data in chunks to handle more than 100 waypoints
   const routeData = await getRouteInChunks(start, waypoints, end);
   routeGeometry = routeData.geometry; // Update the global routeGeometry
-
 
   // Display the route on the map
   displayRoute(routeGeometry);
@@ -237,8 +281,6 @@ async function updateRoute() {
   // Clear the loading state
   isLoading = false;
 }
-
-
 
 // Function to display the route on the map
 function displayRoute(route) {
@@ -405,7 +447,6 @@ function exportToKML() {
   a.click();
   URL.revokeObjectURL(url);
 }
-
 
 // Event listeners
 document.getElementById("updateRoute").addEventListener("click", updateRoute);
