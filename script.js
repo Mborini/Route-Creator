@@ -14,64 +14,48 @@ let start = []; // Global variable to store the start point
 let end = []; // Global variable to store the end point
 let isLoading = false; // Global variable to track loading state
 
+// Function to validate coordinates
+function validateCoordinates(coords) {
+  const [lng, lat] = coords;
+  return lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+}
+
 // Function to call the Mapbox Directions API and get route data
-async function getRoute(waypoints, optimize = false) {
+async function getRoute(waypoints) {
   const coords = waypoints.map((coord) => coord.join(",")).join(";");
-  const apiEndpoint = optimize ? "optimized-trips" : "directions";
-  const url = `https://api.mapbox.com/${apiEndpoint}/v1/mapbox/driving/${coords}?geometries=geojson&overview=full&steps=false&access_token=${mapboxgl.accessToken}`;
+  const url = `https://api.mapbox.com/directions/v5/mapbox/driving/${coords}?geometries=geojson&overview=full&access_token=${mapboxgl.accessToken}`;
 
   try {
     const response = await fetch(url);
     const data = await response.json();
 
-    if (optimize) {
-      if (
-        !data.trips ||
-        !Array.isArray(data.trips) ||
-        data.trips.length === 0
-      ) {
-        throw new Error("No optimized route found for the given waypoints.");
-      }
-      return {
-        geometry: data.trips[0].geometry.coordinates,
-        distance: data.trips[0].distance, // Distance in meters
-        duration: data.trips[0].duration, // Duration in seconds
-      };
-    } else {
-      if (
-        !data.routes ||
-        !Array.isArray(data.routes) ||
-        data.routes.length === 0
-      ) {
-        throw new Error("No route found for the given waypoints.");
-      }
-      return {
-        geometry: data.routes[0].geometry.coordinates,
-        distance: data.routes[0].distance, // Distance in meters
-        duration: data.routes[0].duration, // Duration in seconds
-      };
+    if (!data.routes || !Array.isArray(data.routes) || data.routes.length === 0) {
+      throw new Error("No route found for the given waypoints.");
     }
+    return {
+      geometry: data.routes[0].geometry.coordinates,
+      distance: data.routes[0].distance, // Distance in meters
+      duration: data.routes[0].duration, // Duration in seconds
+    };
   } catch (error) {
     console.error("Error fetching route data:", error.message);
     return { geometry: [], distance: 0, duration: 0 };
   }
 }
 
-async function getOptimizedRoute(waypoints) {
-  const maxWaypointsPerRequest = 9; // Stay within the API's waypoint limit
-  let optimizedGeometry = [];
+async function getRouteInChunks(start, waypoints, end) {
+  const chunkSize = 25; // The maximum number of waypoints allowed per request (start + 23 waypoints + end)
+  let routeGeometry = [];
   let lastPoint = start;
   let totalDistance = 0;
   let totalDuration = 0;
 
-  for (let i = 0; i < waypoints.length; i += maxWaypointsPerRequest - 1) {
-    const chunk = waypoints.slice(i, i + maxWaypointsPerRequest - 1);
-    const chunkRoute = await getRoute([lastPoint, ...chunk, end], true);
+  for (let i = 0; i < waypoints.length; i += chunkSize - 2) {
+    const chunk = waypoints.slice(i, i + chunkSize - 2);
+    const chunkRoute = await getRoute([lastPoint, ...chunk, end]);
 
-    if (chunkRoute.geometry && chunkRoute.geometry.length > 1) {
-      optimizedGeometry = optimizedGeometry.concat(
-        chunkRoute.geometry.slice(1)
-      );
+    if (chunkRoute.geometry && chunkRoute.geometry.length > 0) {
+      routeGeometry = routeGeometry.concat(chunkRoute.geometry);
       lastPoint = chunkRoute.geometry[chunkRoute.geometry.length - 1];
       totalDistance += chunkRoute.distance; // Accumulate distance
       totalDuration += chunkRoute.duration; // Accumulate duration
@@ -81,11 +65,12 @@ async function getOptimizedRoute(waypoints) {
   }
 
   return {
-    geometry: optimizedGeometry,
+    geometry: routeGeometry,
     distance: totalDistance,
     duration: totalDuration,
   };
 }
+
 
 // Function to reverse geocode coordinates to get street names and landmarks
 async function reverseGeocode(coords) {
@@ -96,11 +81,7 @@ async function reverseGeocode(coords) {
 
     if (data.features && data.features.length > 0) {
       const feature = data.features[0];
-      // Extract the most available information
       const placeName = feature.place_name || "Unknown Place";
-
-      //const address = feature.properties?.address || "Unknown Address";
-      // Extract details from context if available
       const context = feature.context || [];
       const city =
         context.find((c) => c.id.includes("place"))?.text || "Unknown City";
@@ -108,8 +89,6 @@ async function reverseGeocode(coords) {
         context.find((c) => c.id.includes("country"))?.text ||
         "Unknown Country";
       
-      // Check for landmark
-
       return {
         placeName,
         city,
@@ -128,12 +107,10 @@ async function reverseGeocode(coords) {
       placeName: "Unknown Place",     
       city: "Unknown City",
       country: "Unknown Country",
-     
     };
   }
 }
 
-// Function to update the route on the map and display route information
 async function updateRoute() {
   const startInput = document.getElementById("start").value;
   const endInput = document.getElementById("end").value;
@@ -147,16 +124,21 @@ async function updateRoute() {
   coordinatesList.innerHTML = "Loading...";
   controlsDiv.innerHTML = "Loading...";
 
+  // Parse the input coordinates
   start = startInput.split(",").map(Number).reverse();
   end = endInput.split(",").map(Number).reverse();
   waypoints = waypointsInput
     .split(";")
     .filter((point) => point.trim() !== "")
-    .map((point) => point.split(",").map(Number).reverse());
+    .map((point) => point.split(",").map(Number).reverse())
+    .filter(validateCoordinates);
 
-  const routeData = await getOptimizedRoute([...waypoints, end]);
-  routeGeometry = routeData.geometry;
+  // Get route data in chunks to handle more than 100 waypoints
+  const routeData = await getRouteInChunks(start, waypoints, end);
+  routeGeometry = routeData.geometry; // Update the global routeGeometry
 
+
+  // Display the route on the map
   displayRoute(routeGeometry);
 
   // Clear inputs after updating the route
@@ -164,8 +146,10 @@ async function updateRoute() {
   document.getElementById("end").value = "";
   document.getElementById("waypoints").value = "";
 
+  // Remove existing markers
   document.querySelectorAll(".marker").forEach((marker) => marker.remove());
 
+  // Add markers for start, end, and waypoints
   addMarker(
     start,
     "Start",
@@ -186,7 +170,7 @@ async function updateRoute() {
     );
   });
 
-  // Fit map to route bounds
+  // Fit the map to the route bounds
   map.fitBounds(
     [
       [
@@ -209,7 +193,7 @@ async function updateRoute() {
   });
   addCoordinateToList(end, "End");
 
-  // Populate the route information
+  // Populate the route information with distance and duration
   controlsDiv.innerHTML = `
     <div class="route-info">
       <div class="route-info-item">
@@ -224,16 +208,14 @@ async function updateRoute() {
     <h4>Waypoints Information</h4>
   `;
 
+  // Reverse geocode and display information for each waypoint
   for (const [index, waypoint] of waypoints.entries()) {
     const info = await reverseGeocode(waypoint);
-    console.log(info);
     controlsDiv.innerHTML += `<div class="route-info-item">
     <p><strong>Stop ${index + 1}:</p> 
-
     <p><strong>Information :</strong> ${info.placeName}</p>
     <p><strong>City:</strong> ${info.city}</p>
     <p><strong>Country:</strong> ${info.country}</p>
-    
   </div>`;
   }
 
@@ -241,18 +223,22 @@ async function updateRoute() {
   const endInfo = await reverseGeocode(end);
   controlsDiv.innerHTML += `
     <div class="route-info-item">
-      <p><strong>Start:</strong> ${startInfo.street}</p>
-      <p><strong>Nearest Landmark:</strong> ${startInfo.landmark}</p>
+      <p><strong>Start:</strong> ${startInfo.placeName}</p>
+      <p><strong>City:</strong> ${startInfo.city}</p>
+      <p><strong>Country:</strong> ${startInfo.country}</p>
     </div>
     <div class="route-info-item">
-      <p><strong>End:</strong> ${endInfo.street}</p>
-      <p><strong>Nearest Landmark:</strong> ${endInfo.landmark}</p>
+      <p><strong>End:</strong> ${endInfo.placeName}</p>
+      <p><strong>City:</strong> ${endInfo.city}</p>
+      <p><strong>Country:</strong> ${endInfo.country}</p>
     </div>
   `;
 
   // Clear the loading state
   isLoading = false;
 }
+
+
 
 // Function to display the route on the map
 function displayRoute(route) {
@@ -419,6 +405,7 @@ function exportToKML() {
   a.click();
   URL.revokeObjectURL(url);
 }
+
 
 // Event listeners
 document.getElementById("updateRoute").addEventListener("click", updateRoute);
