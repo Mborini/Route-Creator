@@ -1,72 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta http-equiv="X-UA-Compatible" content="ie=edge" />
-    <link rel="icon" type="image/png" sizes="32x32" href="./fav.ico" />
-    <link rel="stylesheet" href="style.css" />
-    <script src="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js"></script>
-    <link
-      href="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css"
-      rel="stylesheet"
-    />
-    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.3.1/mapbox-gl-directions.js"></script>
-    <link
-      rel="stylesheet"
-      href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.3.1/mapbox-gl-directions.css"
-      type="text/css"
-    />
-    <link
-      rel="stylesheet"
-      type="text/css"
-      href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css"
-    />
-    <script
-      type="text/javascript"
-      src="https://cdn.jsdelivr.net/npm/toastify-js"
-    ></script>
-    <title>Directions</title>
-  </head>
 
-  <body>
-    <div id="navbar">
-      <h1>Route Creator</h1>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="X-UA-Compatible" content="ie=edge" />
+  <link rel="icon" type="image/png" sizes="32x32" href="./fav.ico" />
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.js"></script>
+  <link href="https://api.mapbox.com/mapbox-gl-js/v2.9.1/mapbox-gl.css" rel="stylesheet" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+
+  <script
+    src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.3.1/mapbox-gl-directions.js"></script>
+  <link rel="stylesheet"
+    href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-directions/v4.3.1/mapbox-gl-directions.css"
+    type="text/css" />
+  <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/toastify-js/src/toastify.min.css" />
+  <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/toastify-js"></script>
+  <title>Directions</title>
+</head>
+
+<body>
+  <div id="navbar">
+    <div style="color: rgb(39,60,101)">
+     <h1>DIMETRIC</h1>
     </div>
-
-    <div id="content">
-      <div id="controls">
-        <h3>Route Information</h3>
-        <div id="routeInfo"></div>
+    <div class="nav-title">
+      <h1>Route Optimizer</h1>
+      
+    </div>
+    <span class="export" id="exportButton"
+      style="align-items: center; display: flex; text-align: center; position: relative; cursor: pointer;">
+      
+      <img src="./folder.png" width="30px" alt="" />
+      <div id="exportPopover" class="popover-content">
+        <button id="exportKML"><img src="./kml.png" width="30px">Export to KML
+        </button>
+        <button id="exportCSV"><img src="./csv.png" width="30px">Export to CSV</button>
+        <button id="exportKMZ"><img src="./kmz.png" width="30px">Export to KMZ</button>
       </div>
-      <div id="map"></div>
-      <div id="sidebar">
-        <div id="control">
-          <h3>Set Route Points</h3>
-          <label for="start">Start (Lat, Long)</label>
-          <input type="text" id="start" placeholder="32.562628, 35.819215" />
-          <br />
-          <label for="end">End (Lat, Long)</label>
-          <input type="text" id="end" placeholder="32.558049, 35.839289" />
-          <br />
-          <label for="waypoints">Waypoints (Lat, Long)</label>
-          <textarea
-            id="waypoints"
-            placeholder="32.562950, 35.824537; 32.561250, 35.832294; ..."
-          ></textarea>
-          <label for="">* Waypoints: Separate with semicolons</label>
-          <br />
-          <button id="updateRoute">Create Route</button>
-          <button id="exportKML">Export to KML</button>
-        </div>
-
-        <div id="listContainer">
-          <h3>Route Coordinates</h3>
-          <div id="coordinatesList"  ></div>
+    </span>
+  </div>
+  <div id="content">
+    <div id="controls">
+      <h3>Route Information</h3>
+      <div id="routeInfo"></div>
+    </div>
+    <div id="map">
+      <div style="position: relative;">
+        <div style="display: grid; gap: 0px; position: absolute;  left: 10px; z-index: 1;">
+          <button id="playbackToggle" style="width: auto; background-color: beige;">
+            <img src="./play-button.png" alt="" width="20px" height="20px" />
+          </button>
+          <button id="measurementTool" style="width: auto;background-color: beige;">
+            <img src="./ruler.png" alt="" width="20px" height="20px" />
+          </button>
         </div>
       </div>
     </div>
+    <div id="sidebar">
+      <div id="control">
+        <h3>Set Route Points</h3>
+        <label for="start">Start (Lat, Long)</label>
+        <input type="text" id="start" placeholder="32.562628, 35.819215" />
+        <br />
+        <label for="end">End (Lat, Long)</label>
+        <input type="text" id="end" placeholder="32.558049, 35.839289" />
+        <br />
+        <label for="waypoints">Waypoints (Lat, Long)</label>
+        <textarea id="waypoints" style="height: 150px;"
+          placeholder="32.562950, 35.824537; 32.561250, 35.832294; ..."></textarea>
+        <label for="">* Waypoints: Separate with semicolons</label>
+        <input style="width: auto;" type="checkbox" id="nearest">Get nearest by nearest waypoints</input>
+        <br />
+        <button id="updateRoute">Create Route</button>
+      </div>
+      <div id="listContainer">
+        <h3>Route Coordinates</h3>
+        <div id="coordinatesList"></div>
+      </div>
+    </div>
+  </div>
 
-    <script src="script.js" defer></script>
-  </body>
+  <script src="script.js" defer></script>
+</body>
+
 </html>
