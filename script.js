@@ -403,92 +403,91 @@ document
   .getElementById("measurementTool")
   .addEventListener("click", startMeasurementTool);
 
-  async function updateRoute() {
-    const startInput = document.getElementById("start").value;
-    const endInput = document.getElementById("end").value;
-    const waypointsInput = document.getElementById("waypoints").value;
-    const useNearest = document.getElementById("nearest").checked;
-  
-    const coordinatesList = document.getElementById("coordinatesList");
-    const controlsDiv = document.getElementById("routeInfo");
-  
-    // Set loading state
-    isLoading = true;
-    coordinatesList.innerHTML = "Loading...";
-    controlsDiv.innerHTML = "Loading...";
-  
-    // Parse the input coordinates
-    start = startInput.split(",").map(Number).reverse();
-    end = endInput.split(",").map(Number).reverse();
-    waypoints = waypointsInput
-      .split(";")
-      .filter((point) => point.trim() !== "")
-      .map((point) => point.split(",").map(Number).reverse())
-      .filter(validateCoordinates);
-  
-    // Conditionally sort waypoints by nearest neighbor strategy if checkbox is checked
-    if (useNearest) {
-      waypoints = sortWaypointsByNearest(start, waypoints);
-    }
-  
-    // Get route data in chunks to handle more than 100 waypoints
-    const routeData = await getRouteInChunks(start, waypoints, end);
-    routeGeometry = routeData.geometry; // Update the global routeGeometry
-  
-    // Display the route on the map
-    displayRoute(routeGeometry);
-  
-    // Clear inputs after updating the route
-    document.getElementById("start").value = "";
-    document.getElementById("end").value = "";
-    document.getElementById("waypoints").value = "";
-  
-    // Remove existing markers
-    document.querySelectorAll(".marker").forEach((marker) => marker.remove());
-  
-    // Ensure correct image paths
-    const startIconUrl = "./start.png";
-    const endIconUrl = "./end.png";
-    const waypointIconUrl = "./recycling-bin.png";
-  
-    // Explicitly log the paths to debug
-    console.log("Start Icon:", startIconUrl);
-    console.log("End Icon:", endIconUrl);
-    console.log("Waypoint Icon:", waypointIconUrl);
-  
-    // Add markers for start, end, and waypoints with correct icons
-    
-  
-    waypoints.forEach((waypoint, index) => {
-      addMarker(waypoint, `Stop ${index + 1}`, waypointIconUrl);
-    });
+async function updateRoute() {
+  const startInput = document.getElementById("start").value;
+  const endInput = document.getElementById("end").value;
+  const waypointsInput = document.getElementById("waypoints").value;
+  const useNearest = document.getElementById("nearest").checked;
+
+  const coordinatesList = document.getElementById("coordinatesList");
+  const controlsDiv = document.getElementById("routeInfo");
+
+  // Set loading state
+  isLoading = true;
+  coordinatesList.innerHTML = "Loading...";
+  controlsDiv.innerHTML = "Loading...";
+
+  // Parse the input coordinates
+  start = startInput.split(",").map(Number).reverse();
+  end = endInput.split(",").map(Number).reverse();
+  waypoints = waypointsInput
+    .split(";")
+    .filter((point) => point.trim() !== "")
+    .map((point) => point.split(",").map(Number).reverse())
+    .filter(validateCoordinates);
+
+  // Conditionally sort waypoints by nearest neighbor strategy if checkbox is checked
+  if (useNearest) {
+    waypoints = sortWaypointsByNearest(start, waypoints);
+  }
+
+  // Get route data in chunks to handle more than 100 waypoints
+  const routeData = await getRouteInChunks(start, waypoints, end);
+  routeGeometry = routeData.geometry; // Update the global routeGeometry
+
+  // Display the route on the map
+  displayRoute(routeGeometry);
+
+  // Clear inputs after updating the route
+  document.getElementById("start").value = "";
+  document.getElementById("end").value = "";
+  document.getElementById("waypoints").value = "";
+
+  // Remove existing markers
+  document.querySelectorAll(".marker").forEach((marker) => marker.remove());
+
+  // Ensure correct image paths
+  const startIconUrl = "./start.png";
+  const endIconUrl = "./end.png";
+  const waypointIconUrl = "./recycling-bin.png";
+
+  // Explicitly log the paths to debug
+  console.log("Start Icon:", startIconUrl);
+  console.log("End Icon:", endIconUrl);
+  console.log("Waypoint Icon:", waypointIconUrl);
+
+  // Add markers for start, end, and waypoints with correct icons
+
+  waypoints.forEach((waypoint, index) => {
+    addMarker(waypoint, `Stop ${index + 1}`, waypointIconUrl);
+  });
   addMarker(start, "Start", startIconUrl);
-    addMarker(end, "End", endIconUrl);
-    // Fit the map to the route bounds
-    map.fitBounds(
+  addMarker(end, "End", endIconUrl);
+  // Fit the map to the route bounds
+  map.fitBounds(
+    [
       [
-        [
-          Math.min(...routeGeometry.map((coord) => coord[0])),
-          Math.min(...routeGeometry.map((coord) => coord[1])),
-        ],
-        [
-          Math.max(...routeGeometry.map((coord) => coord[0])),
-          Math.max(...routeGeometry.map((coord) => coord[1])),
-        ],
+        Math.min(...routeGeometry.map((coord) => coord[0])),
+        Math.min(...routeGeometry.map((coord) => coord[1])),
       ],
-      { padding: 50 }
-    );
-  
-    // Populate the coordinates list
-    coordinatesList.innerHTML = "";
-    addCoordinateToList(start, "Start");
-    waypoints.forEach((waypoint, index) => {
-      addCoordinateToList(waypoint, `Stop ${index + 1}`);
-    });
-    addCoordinateToList(end, "End");
-  
-    // Populate the route information with distance and duration
-    controlsDiv.innerHTML = `
+      [
+        Math.max(...routeGeometry.map((coord) => coord[0])),
+        Math.max(...routeGeometry.map((coord) => coord[1])),
+      ],
+    ],
+    { padding: 50 }
+  );
+
+  // Populate the coordinates list
+  coordinatesList.innerHTML = "";
+  addCoordinateToList(start, "Start");
+  waypoints.forEach((waypoint, index) => {
+    addCoordinateToList(waypoint, `Stop ${index + 1}`);
+  });
+  addCoordinateToList(end, "End");
+
+  // Populate the route information with distance and duration
+  controlsDiv.innerHTML = `
       <div class="route-info">
         <div class="route-info-item">
           <h4>Total Distance:</h4>
@@ -501,21 +500,21 @@ document
       </div>
       <h4>Waypoints Information</h4>
     `;
-  
-    // Reverse geocode and display information for each waypoint
-    for (const [index, waypoint] of waypoints.entries()) {
-      const info = await reverseGeocode(waypoint);
-      controlsDiv.innerHTML += `<div class="route-info-item">
+
+  // Reverse geocode and display information for each waypoint
+  for (const [index, waypoint] of waypoints.entries()) {
+    const info = await reverseGeocode(waypoint);
+    controlsDiv.innerHTML += `<div class="route-info-item">
       <p><strong>Stop ${index + 1}:</p> 
       <p><strong>Information :</strong> ${info.placeName}</p>
       <p><strong>City:</strong> ${info.city}</p>
       <p><strong>Country:</strong> ${info.country}</p>
     </div>`;
-    }
-  
-    const startInfo = await reverseGeocode(start);
-    const endInfo = await reverseGeocode(end);
-    controlsDiv.innerHTML += `
+  }
+
+  const startInfo = await reverseGeocode(start);
+  const endInfo = await reverseGeocode(end);
+  controlsDiv.innerHTML += `
       <div class="route-info-item">
         <p><strong>Start:</strong> ${startInfo.placeName}</p>
         <p><strong>City:</strong> ${startInfo.city}</p>
@@ -527,26 +526,26 @@ document
         <p><strong>Country:</strong> ${endInfo.country}</p>
       </div>
     `;
-  
-    // Clear the loading state
-    isLoading = false;
-  }
-  
-  // Ensure the correct icons are passed to each marker based on its type
-  function addMarker(coords, label, iconUrl) {
-    const el = document.createElement('div');
-    el.className = 'marker';
-    el.style.backgroundImage = `url(${iconUrl})`;
-    el.style.width = '30px';
-    el.style.height = '30px';
-    el.style.backgroundSize = 'cover';
-  
-    new mapboxgl.Marker(el)
-      .setLngLat(coords)
-      .setPopup(new mapboxgl.Popup({ offset: 25 }).setText(label))
-      .addTo(map);
-  }
-  
+
+  // Clear the loading state
+  isLoading = false;
+}
+
+// Ensure the correct icons are passed to each marker based on its type
+function addMarker(coords, label, iconUrl) {
+  const el = document.createElement("div");
+  el.className = "marker";
+  el.style.backgroundImage = `url(${iconUrl})`;
+  el.style.width = "30px";
+  el.style.height = "30px";
+  el.style.backgroundSize = "cover";
+
+  new mapboxgl.Marker(el)
+    .setLngLat(coords)
+    .setPopup(new mapboxgl.Popup({ offset: 25 }).setText(label))
+    .addTo(map);
+}
+
 // Function to display the route on the map
 function displayRoute(route) {
   if (map.getLayer("route")) {
@@ -607,12 +606,12 @@ function displayRoute(route) {
 }
 
 function addMarker(coords, label, iconUrl) {
-  const el = document.createElement('div');
-  el.className = 'marker';
+  const el = document.createElement("div");
+  el.className = "marker";
   el.style.backgroundImage = `url(${iconUrl})`;
-  el.style.width = '30px';
-  el.style.height = '30px';
-  el.style.backgroundSize = 'cover';
+  el.style.width = "30px";
+  el.style.height = "30px";
+  el.style.backgroundSize = "cover";
 
   new mapboxgl.Marker(el)
     .setLngLat(coords)
@@ -834,7 +833,47 @@ function exportToKML() {
   a.click();
   URL.revokeObjectURL(url);
 }
+let previouslySelectedId = "streetmap"; // Initially hide the "satmap"
+
+document.addEventListener("DOMContentLoaded", function() {
+  document.getElementById(previouslySelectedId).hidden = true; // Hide the initially selected map
+});
+
+function changeStyle(style, id) {
+  if (previouslySelectedId) {
+    // Show the previously selected element
+    document.getElementById(previouslySelectedId).hidden = false;
+  }
+
+  // Hide the currently selected element
+  document.getElementById(id).hidden = true;
+
+  // Set the new map style
+  map.setStyle(`mapbox://styles/mapbox/${style}`);
+
+  // Update the previously selected element ID
+  previouslySelectedId = id;
+}
 
 // Event listeners
 document.getElementById("updateRoute").addEventListener("click", updateRoute);
 document.getElementById("exportKML").addEventListener("click", exportToKML);
+
+// HTML for the style selector
+const styleSelectorHTML = `
+<div id="styleSelector" style="position: absolute; bottom: 25px; right: 10px; background: white; z-index: 1; border-radius: 5px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); padding: 2px; display: flex; flex-direction: column; gap: 10px;">
+    <img id="satmap" src="./satmap.webp" width="60" height="60" alt="Satellite Map" style="cursor: pointer; border-radius: 5px;" onclick='changeStyle("satellite-v9", "satmap")'>
+    <img id="streetmap" src="./streetmap.jpeg" width="60" height="60" alt="Street Map" style="cursor: pointer; border-radius: 5px;" onclick='changeStyle("streets-v11", "streetmap")'>
+</div>
+`;
+
+// append in map
+document
+  .getElementById("map")
+  .insertAdjacentHTML("beforeend", styleSelectorHTML);
+
+// Event listener to update the map style
+document.getElementById("mapStyle").addEventListener("change", function () {
+  const selectedStyle = this.value;
+  map.setStyle(selectedStyle);
+});
